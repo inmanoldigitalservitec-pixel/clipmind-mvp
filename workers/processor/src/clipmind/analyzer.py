@@ -13,7 +13,8 @@ FILLER_PATTERNS = [
     r"^bueno[\.\s,]*$",
     r"^este[\.\s,]*$",
     r"^ok[\.\s,]*$",
-    r"vamos a empezar$",
+    r"\b(eh|mmm|um|este|bueno)\b.*\bvamos a empezar\b",
+    r"\bvamos a empezar[\.\s,]*$",
     r"déjame organizarme",
     r"dejame organizarme",
 ]
