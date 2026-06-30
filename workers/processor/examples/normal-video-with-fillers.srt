@@ -1,0 +1,87 @@
+1
+00:00:00,000 --> 00:00:02,300
+Eh... bueno, vamos a empezar.
+
+2
+00:00:02,300 --> 00:00:05,800
+Hoy quiero explicarte cómo organizar un video largo para convertirlo en clips.
+
+3
+00:00:05,800 --> 00:00:08,200
+Este... la idea principal es no cortar por cortar.
+
+4
+00:00:08,200 --> 00:00:11,900
+Primero buscamos las partes donde la persona realmente dice algo útil.
+
+5
+00:00:11,900 --> 00:00:15,900
+...
+
+6
+00:00:15,900 --> 00:00:19,400
+Después miramos si hay repeticiones o frases que se pueden limpiar.
+
+7
+00:00:19,400 --> 00:00:22,600
+Después miramos si hay repeticiones o frases que se pueden limpiar.
+
+8
+00:00:22,600 --> 00:00:25,000
+No, espera, déjame decirlo mejor.
+
+9
+00:00:25,000 --> 00:00:30,500
+Después revisamos si una frase se repite o si el hablante se corrigió, y quitamos esa parte.
+
+10
+00:00:30,500 --> 00:00:34,000
+Aquí puedes ver en pantalla el ejemplo de la línea de tiempo.
+
+11
+00:00:34,000 --> 00:00:38,600
+...
+
+12
+00:00:38,600 --> 00:00:42,000
+Aunque hay una pausa, no deberíamos cortarla si la persona está mostrando algo importante.
+
+13
+00:00:42,000 --> 00:00:44,300
+Mmm, ok.
+
+14
+00:00:44,300 --> 00:00:49,000
+Ahora vamos a buscar un momento fuerte que pueda funcionar como inicio de un clip corto.
+
+15
+00:00:49,000 --> 00:00:53,500
+La mejor parte de este sistema es que la IA no solo corta silencios, también entiende el contexto.
+
+16
+00:00:53,500 --> 00:00:57,700
+La mejor parte de este sistema es que la IA no solo corta silencios, también entiende el contexto.
+
+17
+00:00:57,700 --> 00:01:00,000
+No, no, esa toma salió mal.
+
+18
+00:01:00,000 --> 00:01:04,500
+La mejor parte de este sistema es que puede explicar por qué cortó cada segmento.
+
+19
+00:01:04,500 --> 00:01:08,500
+...
+
+20
+00:01:08,500 --> 00:01:12,500
+Entonces el editor mantiene lo importante y elimina las partes que rompen el ritmo.
+
+21
+00:01:12,500 --> 00:01:15,400
+Eh, y bueno, eso sería todo por ahora.
+
+22
+00:01:15,400 --> 00:01:19,000
+En la próxima prueba vamos a conectar esto con FFmpeg para cortar el video real.
