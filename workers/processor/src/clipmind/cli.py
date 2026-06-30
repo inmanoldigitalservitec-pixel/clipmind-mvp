@@ -8,6 +8,19 @@ import sys
 from .analyzer import analyze_segments
 from .srt import parse_srt
 from .validator import validate_cuts_json
+from .word_analyzer import analyze_words
+from .words import load_words_json
+
+
+def _write_or_print(payload: dict, output_path: str | None, pretty: bool = False, label: str = "output") -> None:
+    output = json.dumps(payload, ensure_ascii=False, indent=2 if pretty else None)
+    if output_path:
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(output + "\n", encoding="utf-8")
+        print(f"{label} written to {path}")
+    else:
+        print(output)
 
 
 def analyze_command(args: argparse.Namespace) -> int:
@@ -31,16 +44,48 @@ def analyze_command(args: argparse.Namespace) -> int:
             print(f"- {error}", file=sys.stderr)
         return 1
 
-    output = json.dumps(payload, ensure_ascii=False, indent=2 if args.pretty else None)
+    _write_or_print(payload, args.output, pretty=args.pretty, label="cuts.json")
+    return 0
 
-    if args.output:
-        output_path = Path(args.output)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(output + "\n", encoding="utf-8")
-        print(f"cuts.json written to {output_path}")
-    else:
-        print(output)
 
+def analyze_words_command(args: argparse.Namespace) -> int:
+    words_path = Path(args.words)
+    if not words_path.exists():
+        print(f"Words JSON file not found: {words_path}", file=sys.stderr)
+        return 2
+
+    words = load_words_json(words_path)
+    payload = analyze_words(words, mode=args.mode)
+    payload["source"] = {
+        "words_json": str(words_path),
+        "words": len(words),
+    }
+
+    _write_or_print(payload, args.output, pretty=args.pretty, label="candidate_cuts.json")
+    return 0
+
+
+def transcribe_command(args: argparse.Namespace) -> int:
+    audio_path = Path(args.audio)
+    if not audio_path.exists():
+        print(f"Audio file not found: {audio_path}", file=sys.stderr)
+        return 2
+
+    try:
+        from .transcribe_local import transcribe_with_faster_whisper
+
+        payload = transcribe_with_faster_whisper(
+            audio_path=audio_path,
+            model_size=args.model,
+            language=args.language,
+            device=args.device,
+            compute_type=args.compute_type,
+        )
+    except Exception as exc:
+        print(f"Local transcription failed: {exc}", file=sys.stderr)
+        return 1
+
+    _write_or_print(payload, args.output, pretty=args.pretty, label="transcript_words.json")
     return 0
 
 
@@ -54,6 +99,29 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--mode", default="clean_cut", choices=["clean_cut", "clip_finder", "tighten_pacing"])
     analyze.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
     analyze.set_defaults(func=analyze_command)
+
+    analyze_words_parser = subparsers.add_parser(
+        "analyze-words",
+        help="Analyze word-level timestamps and return candidate cuts JSON",
+    )
+    analyze_words_parser.add_argument("--words", required=True, help="Path to transcript_words.json")
+    analyze_words_parser.add_argument("--output", help="Optional path to write candidate_cuts.json")
+    analyze_words_parser.add_argument("--mode", default="clean_cut", choices=["clean_cut", "clip_finder", "tighten_pacing"])
+    analyze_words_parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    analyze_words_parser.set_defaults(func=analyze_words_command)
+
+    transcribe = subparsers.add_parser(
+        "transcribe",
+        help="Transcribe audio locally with faster-whisper and write word-level timestamps",
+    )
+    transcribe.add_argument("--audio", required=True, help="Path to audio file, for example outputs/audio.wav")
+    transcribe.add_argument("--output", default="outputs/transcript_words.json", help="Path to write transcript_words.json")
+    transcribe.add_argument("--model", default="base", help="faster-whisper model size, for example base, small, medium, large-v3")
+    transcribe.add_argument("--language", default="es", help="Speech language code")
+    transcribe.add_argument("--device", default="auto", help="Device override, for example cpu or cuda")
+    transcribe.add_argument("--compute-type", default="auto", help="Compute type override, for example int8 or float16")
+    transcribe.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    transcribe.set_defaults(func=transcribe_command)
 
     return parser
 
