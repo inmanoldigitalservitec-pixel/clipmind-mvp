@@ -1,0 +1,42 @@
+name: Processor tests
+
+on:
+  push:
+    paths:
+      - "workers/processor/**"
+      - ".github/workflows/processor-tests.yml"
+  pull_request:
+    paths:
+      - "workers/processor/**"
+      - ".github/workflows/processor-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/processor
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: PYTHONPATH=src pytest -q
+
+      - name: Generate sample cuts JSON
+        run: PYTHONPATH=src python -m clipmind.cli analyze --srt examples/sample.srt --output outputs/cuts.json --pretty
+
+      - name: Upload sample cuts artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-cuts-json
+          path: workers/processor/outputs/cuts.json
