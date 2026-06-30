@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClipMind SRT Analyzer</title>
+    <style>
+      :root { color-scheme: light; --bg:#f6f7f9; --surface:#fff; --text:#17202a; --muted:#64748b; --line:#d8dee8; --accent:#1769e0; --danger:#b42318; --good:#178a55; }
+      * { box-sizing: border-box; }
+      body { margin:0; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+      main { width:min(1120px, 100%); margin:0 auto; padding:28px 16px 48px; }
+      .hero { display:grid; gap:14px; margin-bottom:18px; }
+      .eyebrow { color:var(--accent); font-weight:800; text-transform:uppercase; letter-spacing:.12em; font-size:12px; }
+      h1 { margin:0; font-size:clamp(30px, 8vw, 56px); line-height:.95; letter-spacing:-.05em; }
+      p { margin:0; color:var(--muted); line-height:1.6; }
+      .grid { display:grid; grid-template-columns:1fr; gap:14px; }
+      @media (min-width: 900px) { .grid { grid-template-columns: .9fr 1.1fr; } }
+      .card { background:var(--surface); border:1px solid var(--line); border-radius:24px; padding:18px; box-shadow:0 18px 60px rgba(15,23,42,.06); }
+      .card h2 { margin:0 0 12px; font-size:18px; }
+      textarea { width:100%; min-height:360px; border:1px solid var(--line); border-radius:18px; padding:14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; resize:vertical; color:var(--text); background:#fbfcfe; }
+      pre { margin:0; white-space:pre-wrap; word-break:break-word; min-height:360px; border:1px solid var(--line); border-radius:18px; padding:14px; background:#0f172a; color:#e2e8f0; font-size:12.5px; overflow:auto; }
+      .actions { display:flex; gap:10px; flex-wrap:wrap; margin:14px 0 0; }
+      button, label.file { border:0; border-radius:999px; padding:12px 16px; font-weight:800; cursor:pointer; background:var(--accent); color:white; display:inline-flex; align-items:center; gap:8px; }
+      button.secondary, label.file { background:#e8f1ff; color:#1356bb; }
+      input[type=file] { display:none; }
+      .summary { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+      .metric { border:1px solid var(--line); border-radius:18px; padding:12px; background:#fbfcfe; }
+      .metric strong { display:block; font-size:24px; }
+      .metric span { color:var(--muted); font-size:12px; }
+      .cuts { display:grid; gap:10px; margin-top:14px; }
+      .cut { border:1px solid var(--line); border-radius:18px; padding:12px; background:#fbfcfe; }
+      .cut b { display:block; margin-bottom:4px; }
+      .cut small { color:var(--muted); }
+      .status { margin-top:10px; font-size:13px; color:var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">ClipMind backend phase 1</div>
+        <h1>SRT → cuts.json válido</h1>
+        <p>Carga un archivo .srt o pega subtítulos. Esta página replica en JavaScript la primera lógica del worker: detecta relleno, falsos inicios y devuelve JSON de cortes.</p>
+      </section>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Entrada SRT</h2>
+          <textarea id="srtInput" spellcheck="false">1
+00:00:00,000 --> 00:00:02,000
+Eh... bueno, vamos a empezar.
+
+2
+00:00:02,000 --> 00:00:06,000
+Hoy te voy a enseñar cómo automatizar cortes de video.
+
+3
+00:00:06,000 --> 00:00:08,500
+No, espera, déjame repetir eso.
+
+4
+00:00:08,500 --> 00:00:13,000
+Hoy te voy a enseñar cómo automatizar cortes de video usando subtítulos.
+
+5
+00:00:13,000 --> 00:00:17,000
+Aquí puedes ver el resultado en pantalla.</textarea>
+          <div class="actions">
+            <label class="file">Cargar .srt <input id="fileInput" type="file" accept=".srt,text/plain" /></label>
+            <button id="analyzeBtn">Analizar SRT</button>
+            <button id="copyBtn" class="secondary">Copiar JSON</button>
+          </div>
+          <div id="status" class="status">Listo.</div>
+        </div>
+
+        <div class="card">
+          <h2>Resultado</h2>
+          <div class="summary">
+            <div class="metric"><strong id="segCount">0</strong><span>segmentos</span></div>
+            <div class="metric"><strong id="cutCount">0</strong><span>cortes</span></div>
+            <div class="metric"><strong id="keepCount">0</strong><span>rangos keep</span></div>
+          </div>
+          <pre id="jsonOutput"></pre>
+          <div id="cutsList" class="cuts"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+
+      function timestampToMs(value) {
+        const match = value.trim().match(/^(\d{2}):(\d{2}):(\d{2})[,.](\d{3})$/);
+        if (!match) throw new Error(`Timestamp inválido: ${value}`);
+        const [, h, m, s, ms] = match.map(Number);
+        return h * 3600000 + m * 60000 + s * 1000 + ms;
+      }
+
+      function msToTimestamp(ms) {
+        const h = Math.floor(ms / 3600000); ms %= 3600000;
+        const m = Math.floor(ms / 60000); ms %= 60000;
+        const s = Math.floor(ms / 1000); const milli = ms % 1000;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(milli).padStart(3,'0')}`;
+      }
+
+      function parseSrt(content) {
+        const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+        if (!normalized) return [];
+        return normalized.split(/\n\s*\n/).map((block, fallbackIndex) => {
+          const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+          let pos = /^\d+$/.test(lines[0]) ? 1 : 0;
+          const index = pos === 1 ? Number(lines[0]) : fallbackIndex + 1;
+          if (!lines[pos] || !lines[pos].includes('-->')) return null;
+          const [startRaw, endRaw] = lines[pos].split('-->').map(x => x.trim());
+          const startMs = timestampToMs(startRaw);
+          const endMs = timestampToMs(endRaw);
+          const text = lines.slice(pos + 1).join(' ').trim();
+          return { index, startMs, endMs, text, start: msToTimestamp(startMs), end: msToTimestamp(endMs) };
+        }).filter(Boolean);
+      }
+
+      function normalizeText(text) {
+        return text.toLowerCase().replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      }
+
+      function isFiller(text) {
+        const compact = normalizeText(text);
+        if (!compact) return true;
+        if (compact.split(' ').length <= 2 && ['eh', 'mmm', 'um', 'este'].some(t => compact.includes(t))) return true;
+        return [
+          /^e+h+[\.\s,]*$/,
+          /^m+h+[\.\s,]*$/,
+          /^um+[\.\s,]*$/,
+          /^bueno[\.\s,]*$/,
+          /^este[\.\s,]*$/,
+          /^ok[\.\s,]*$/,
+          /\b(eh|mmm|um|este|bueno)\b.*\bvamos a empezar\b/,
+          /\bvamos a empezar[\.\s,]*$/,
+          /déjame organizarme/,
+          /dejame organizarme/
+        ].some(rx => rx.test(compact));
+      }
+
+      function isFalseStart(text) {
+        const compact = normalizeText(text);
+        return [/no,? espera/, /espera,? no/, /déjame repetir/, /dejame repetir/, /déjame decirlo mejor/, /dejame decirlo mejor/, /lo digo otra vez/].some(rx => rx.test(compact));
+      }
+
+      function isNearDuplicate(a, b) {
+        const aw = new Set(normalizeText(a).split(' ').filter(Boolean));
+        const bw = new Set(normalizeText(b).split(' ').filter(Boolean));
+        if (aw.size < 4 || bw.size < 4) return false;
+        const union = new Set([...aw, ...bw]);
+        const inter = [...aw].filter(x => bw.has(x));
+        return inter.length / Math.max(union.size, 1) >= 0.72;
+      }
+
+      function cut(startMs, endMs, reason, confidence) {
+        return { start: msToTimestamp(startMs), end: msToTimestamp(endMs), reason, confidence: Math.round(confidence * 100) / 100 };
+      }
+
+      function toMs(ts) { return timestampToMs(ts); }
+
+      function mergeCuts(cuts) {
+        return cuts.sort((a,b) => toMs(a.start) - toMs(b.start)).reduce((acc, item) => {
+          const last = acc[acc.length - 1];
+          if (last && toMs(item.start) <= toMs(last.end) + 250) {
+            if (toMs(item.end) > toMs(last.end)) last.end = item.end;
+            last.reason += `; ${item.reason}`;
+            last.confidence = Math.max(last.confidence, item.confidence);
+          } else acc.push({...item});
+          return acc;
+        }, []);
+      }
+
+      function buildKeepRanges(segments, remove) {
+        if (!segments.length) return [];
+        let cursor = segments[0].startMs;
+        const videoEnd = segments[segments.length - 1].endMs;
+        const keep = [];
+        for (const r of remove) {
+          const s = toMs(r.start), e = toMs(r.end);
+          if (s > cursor) keep.push({ start: msToTimestamp(cursor), end: msToTimestamp(s), reason: 'content preserved after automatic cut analysis' });
+          cursor = Math.max(cursor, e);
+        }
+        if (cursor < videoEnd) keep.push({ start: msToTimestamp(cursor), end: msToTimestamp(videoEnd), reason: 'content preserved after automatic cut analysis' });
+        return keep.filter(k => k.start !== k.end);
+      }
+
+      function analyzeSegments(segments, mode = 'clean_cut') {
+        let remove = [];
+        const warnings = [];
+        segments.forEach((seg, i) => {
+          const text = normalizeText(seg.text);
+          if (isFiller(text)) return remove.push(cut(seg.startMs, seg.endMs, 'filler or empty speech with no useful content', 0.86));
+          if (isFalseStart(text)) return remove.push(cut(seg.startMs, seg.endMs, 'false start or self-correction', 0.84));
+          if (i > 0 && isNearDuplicate(segments[i-1].text, seg.text)) return remove.push(cut(seg.startMs, seg.endMs, 'repeated idea from previous subtitle', 0.78));
+          if ((seg.endMs - seg.startMs) >= 4000 && text.split(' ').length <= 2) remove.push(cut(seg.startMs, seg.endMs, 'long low-information subtitle', 0.72));
+        });
+        remove = mergeCuts(remove);
+        if (!segments.length) warnings.push('No SRT segments were found.');
+        if (!remove.length) warnings.push('No automatic cuts detected by the rule-based analyzer.');
+        return { version: '0.1-browser', mode, remove, keep: buildKeepRanges(segments, remove), warnings, source: { srt: 'browser-input', segments: segments.length } };
+      }
+
+      function render() {
+        try {
+          const segments = parseSrt($('srtInput').value);
+          const payload = analyzeSegments(segments);
+          $('jsonOutput').textContent = JSON.stringify(payload, null, 2);
+          $('segCount').textContent = segments.length;
+          $('cutCount').textContent = payload.remove.length;
+          $('keepCount').textContent = payload.keep.length;
+          $('cutsList').innerHTML = payload.remove.map(c => `<div class="cut"><b>${c.start} → ${c.end}</b><small>${c.reason} · confidence ${c.confidence}</small></div>`).join('');
+          $('status').textContent = 'Análisis completado.';
+        } catch (err) {
+          $('status').textContent = err.message;
+          $('jsonOutput').textContent = JSON.stringify({ error: err.message }, null, 2);
+        }
+      }
+
+      $('fileInput').addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        $('srtInput').value = await file.text();
+        $('status').textContent = `Archivo cargado: ${file.name}`;
+        render();
+      });
+      $('analyzeBtn').addEventListener('click', render);
+      $('copyBtn').addEventListener('click', async () => {
+        await navigator.clipboard.writeText($('jsonOutput').textContent);
+        $('status').textContent = 'JSON copiado.';
+      });
+      render();
+    </script>
+  </body>
+</html>
