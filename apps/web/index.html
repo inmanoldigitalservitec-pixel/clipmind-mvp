@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClipMind MVP</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --surface: #ffffff;
+        --surface-soft: #eef2f6;
+        --text: #17202a;
+        --muted: #637083;
+        --line: #d8dee8;
+        --accent: #1769e0;
+        --accent-soft: #e8f1ff;
+        --good: #178a55;
+        --warn: #a45b00;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(16px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .topbar {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 750;
+        letter-spacing: 0;
+      }
+
+      .mark {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--accent);
+        color: white;
+        font-weight: 800;
+      }
+
+      .status {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--good);
+      }
+
+      main {
+        max-width: 1180px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 24px 20px 40px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .intro {
+        padding: 28px;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(32px, 5vw, 58px);
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 640px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.5;
+      }
+
+      .upload {
+        margin-top: 26px;
+        padding: 18px;
+        border: 1px dashed #9fb0c6;
+        border-radius: 8px;
+        background: var(--surface-soft);
+        display: grid;
+        gap: 14px;
+      }
+
+      .upload-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .file-label,
+      .primary,
+      .secondary {
+        border: 0;
+        border-radius: 8px;
+        padding: 11px 15px;
+        cursor: pointer;
+        font-weight: 650;
+      }
+
+      .file-label,
+      .primary {
+        background: var(--accent);
+        color: white;
+      }
+
+      .secondary {
+        background: #ecf0f5;
+        color: var(--text);
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+
+      .file-name {
+        color: var(--muted);
+        min-width: 180px;
+      }
+
+      .preview {
+        padding: 18px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .video-box {
+        min-height: 300px;
+        border-radius: 8px;
+        background:
+          linear-gradient(135deg, rgba(23, 105, 224, 0.18), transparent 45%),
+          #151a22;
+        color: white;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .video-box video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #10151c;
+      }
+
+      .empty-video {
+        text-align: center;
+        color: #c6d0dd;
+        padding: 24px;
+      }
+
+      .timeline {
+        height: 58px;
+        border-radius: 8px;
+        background: var(--surface-soft);
+        border: 1px solid var(--line);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .segment {
+        position: absolute;
+        top: 12px;
+        height: 34px;
+        border-radius: 6px;
+      }
+
+      .segment.keep {
+        background: rgba(23, 138, 85, 0.24);
+        border: 1px solid rgba(23, 138, 85, 0.4);
+      }
+
+      .segment.cut {
+        background: rgba(164, 91, 0, 0.18);
+        border: 1px solid rgba(164, 91, 0, 0.38);
+      }
+
+      .grid {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 24px;
+      }
+
+      .section-title {
+        padding: 18px 18px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .pill {
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .steps,
+      .cuts {
+        padding: 16px 18px 18px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .step,
+      .cut {
+        display: grid;
+        gap: 5px;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfe;
+      }
+
+      .step strong,
+      .cut strong {
+        font-size: 14px;
+      }
+
+      .step span,
+      .cut span {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .cut-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .time {
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 0 18px 18px;
+      }
+
+      @media (max-width: 860px) {
+        .hero,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        h1 {
+          font-size: 40px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="topbar">
+          <div class="brand">
+            <div class="mark">C</div>
+            <span>ClipMind MVP</span>
+          </div>
+          <div class="status">
+            <span class="dot"></span>
+            Local prototype ready
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="panel intro">
+            <h1>AI cuts with context.</h1>
+            <p class="lead">
+              Upload a video, let ClipMind read the transcript and key frames,
+              then review the cuts it recommends before exporting.
+            </p>
+
+            <div class="upload">
+              <div class="upload-row">
+                <label class="file-label" for="videoInput">Choose video</label>
+                <input id="videoInput" type="file" accept="video/*" />
+                <span id="fileName" class="file-name">No video selected</span>
+              </div>
+              <div class="upload-row">
+                <button class="primary" id="analyzeBtn">Simulate analysis</button>
+                <button class="secondary" id="resetBtn">Reset</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel preview">
+            <div class="video-box" id="videoBox">
+              <div class="empty-video">
+                Your video preview will appear here.
+              </div>
+            </div>
+            <div class="timeline" aria-label="Suggested edit timeline">
+              <div class="segment keep" style="left: 0%; width: 28%"></div>
+              <div class="segment cut" style="left: 30%; width: 12%"></div>
+              <div class="segment keep" style="left: 44%; width: 24%"></div>
+              <div class="segment cut" style="left: 70%; width: 8%"></div>
+              <div class="segment keep" style="left: 80%; width: 20%"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid">
+          <div class="panel">
+            <div class="section-title">
+              <h2>Processing Flow</h2>
+              <span class="pill">MVP</span>
+            </div>
+            <div class="steps" id="steps">
+              <div class="step">
+                <strong>1. Extract audio</strong>
+                <span>FFmpeg creates an audio file from the uploaded video.</span>
+              </div>
+              <div class="step">
+                <strong>2. Transcribe</strong>
+                <span>Whisper generates SRT timestamps for the spoken content.</span>
+              </div>
+              <div class="step">
+                <strong>3. Read frames</strong>
+                <span>Key frames explain what is happening visually.</span>
+              </div>
+              <div class="step">
+                <strong>4. Suggest cuts</strong>
+                <span>The AI returns JSON with cuts, keeps, and reasons.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="section-title">
+              <h2>Suggested Cuts</h2>
+              <span class="pill" id="cutStatus">Demo data</span>
+            </div>
+            <div class="cuts" id="cuts"></div>
+            <div class="actions">
+              <button class="primary">Accept selected cuts</button>
+              <button class="secondary">Export preview</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const input = document.getElementById("videoInput");
+      const fileName = document.getElementById("fileName");
+      const videoBox = document.getElementById("videoBox");
+      const analyzeBtn = document.getElementById("analyzeBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const cuts = document.getElementById("cuts");
+      const cutStatus = document.getElementById("cutStatus");
+
+      const demoCuts = [
+        {
+          type: "Remove",
+          time: "00:00:00.000 - 00:00:02.000",
+          reason: "Filler intro before the useful explanation starts.",
+        },
+        {
+          type: "Keep",
+          time: "00:00:10.000 - 00:00:20.000",
+          reason: "The pause belongs to a visual demonstration on screen.",
+        },
+        {
+          type: "Remove",
+          time: "00:01:14.200 - 00:01:18.900",
+          reason: "Repeated phrase and false start.",
+        },
+      ];
+
+      function renderCuts(items) {
+        cuts.innerHTML = items
+          .map(
+            (item) => `
+              <article class="cut">
+                <div class="cut-head">
+                  <strong>${item.type}</strong>
+                  <span class="time">${item.time}</span>
+                </div>
+                <span>${item.reason}</span>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      input.addEventListener("change", () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+
+        fileName.textContent = file.name;
+        const url = URL.createObjectURL(file);
+        videoBox.innerHTML = `<video controls src="${url}"></video>`;
+      });
+
+      analyzeBtn.addEventListener("click", () => {
+        cutStatus.textContent = "3 suggestions";
+        renderCuts(demoCuts);
+      });
+
+      resetBtn.addEventListener("click", () => {
+        input.value = "";
+        fileName.textContent = "No video selected";
+        cutStatus.textContent = "Demo data";
+        videoBox.innerHTML = `<div class="empty-video">Your video preview will appear here.</div>`;
+        renderCuts(demoCuts.slice(0, 2));
+      });
+
+      renderCuts(demoCuts.slice(0, 2));
+    </script>
+  </body>
+</html>
