@@ -1,0 +1,19 @@
+1
+00:00:00,000 --> 00:00:02,000
+Eh... bueno, vamos a empezar.
+
+2
+00:00:02,000 --> 00:00:06,000
+Hoy te voy a enseñar cómo automatizar cortes de video.
+
+3
+00:00:06,000 --> 00:00:08,500
+No, espera, déjame repetir eso.
+
+4
+00:00:08,500 --> 00:00:13,000
+Hoy te voy a enseñar cómo automatizar cortes de video usando subtítulos.
+
+5
+00:00:13,000 --> 00:00:17,000
+Aquí puedes ver el resultado en pantalla.
