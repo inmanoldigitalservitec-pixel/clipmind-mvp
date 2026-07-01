@@ -22,7 +22,19 @@ pip install -r requirements-dev.txt
 pip install -r requirements-whisper.txt
 ```
 
+You also need FFmpeg installed on the computer.
+
 ## 2. Extract audio from a video
+
+Using the ClipMind CLI:
+
+```bash
+PYTHONPATH=src python -m clipmind.cli extract-audio \
+  --video input.mp4 \
+  --output outputs/audio.wav
+```
+
+Manual FFmpeg equivalent:
 
 ```bash
 mkdir -p outputs
