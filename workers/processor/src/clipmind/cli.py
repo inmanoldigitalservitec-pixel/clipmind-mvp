@@ -65,6 +65,19 @@ def analyze_words_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def extract_audio_command(args: argparse.Namespace) -> int:
+    try:
+        from .media import extract_audio
+
+        output_path = extract_audio(args.video, args.output, sample_rate=args.sample_rate)
+    except Exception as exc:
+        print(f"Audio extraction failed: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"audio.wav written to {output_path}")
+    return 0
+
+
 def transcribe_command(args: argparse.Namespace) -> int:
     audio_path = Path(args.audio)
     if not audio_path.exists():
@@ -109,6 +122,15 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_words_parser.add_argument("--mode", default="clean_cut", choices=["clean_cut", "clip_finder", "tighten_pacing"])
     analyze_words_parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
     analyze_words_parser.set_defaults(func=analyze_words_command)
+
+    extract_audio_parser = subparsers.add_parser(
+        "extract-audio",
+        help="Extract mono 16 kHz audio from a video using FFmpeg",
+    )
+    extract_audio_parser.add_argument("--video", required=True, help="Path to input video file")
+    extract_audio_parser.add_argument("--output", default="outputs/audio.wav", help="Path to write audio.wav")
+    extract_audio_parser.add_argument("--sample-rate", type=int, default=16000, help="Audio sample rate")
+    extract_audio_parser.set_defaults(func=extract_audio_command)
 
     transcribe = subparsers.add_parser(
         "transcribe",
