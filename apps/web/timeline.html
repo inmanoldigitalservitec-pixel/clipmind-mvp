@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClipMind Timeline MVP</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --panel-2: #eef3f8;
+        --text: #111827;
+        --muted: #667085;
+        --line: #d8e0ea;
+        --dark: #0f172a;
+        --accent: #155eef;
+        --remove: #e5484d;
+        --clip: #155eef;
+        --keep: #12a150;
+        --note: #7c3aed;
+        --shadow: 0 16px 42px rgba(17, 24, 39, 0.08);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      button, input, select { font: inherit; }
+      button { border: 0; cursor: pointer; }
+      .app { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+      header { background: rgba(255,255,255,.92); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); position: sticky; top: 0; z-index: 20; }
+      .topbar { max-width: 1380px; margin: 0 auto; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; }
+      .logo { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; background: var(--dark); color: white; }
+      .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .btn, .file-btn { min-height: 38px; padding: 9px 12px; border-radius: 8px; font-weight: 700; background: #e8eef7; color: var(--text); }
+      .btn.primary, .file-btn { background: var(--accent); color: white; }
+      .file-input { display: none; }
+      main { max-width: 1380px; width: 100%; margin: 0 auto; padding: 18px; display: grid; grid-template-columns: minmax(0,1fr) 380px; gap: 18px; }
+      .workspace { min-width: 0; display: grid; gap: 18px; }
+      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+      .stage { display: grid; grid-template-columns: minmax(280px,.9fr) minmax(300px,1.1fr); gap: 18px; padding: 18px; }
+      .video-frame { min-height: 320px; border-radius: 8px; background: linear-gradient(135deg, rgba(21,94,239,.18), transparent 42%), #101828; overflow: hidden; display: grid; place-items: center; color: #d7e0ee; }
+      .video-frame video { width: 100%; height: 100%; min-height: 320px; object-fit: contain; background: #050b18; }
+      .empty-video { max-width: 280px; text-align: center; line-height: 1.45; padding: 18px; }
+      .summary { display: grid; gap: 14px; align-content: start; }
+      h1,h2,h3,p { margin: 0; }
+      h1 { font-size: clamp(30px,4vw,54px); line-height: 1; letter-spacing: 0; }
+      .lead { color: var(--muted); font-size: 16px; line-height: 1.5; }
+      .metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+      .metric { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcff; }
+      .metric strong { display: block; font-size: 20px; }
+      .metric span { color: var(--muted); font-size: 13px; }
+      .legend { display: flex; gap: 8px; flex-wrap: wrap; }
+      .tag { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border-radius: 999px; background: var(--panel-2); color: var(--muted); font-size: 13px; font-weight: 650; }
+      .swatch { width: 10px; height: 10px; border-radius: 999px; }
+      .timeline-panel { overflow: hidden; }
+      .timeline-head { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+      .timeline-tools { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
+      .timeline-tools input { accent-color: var(--accent); }
+      .timeline-shell { display: grid; grid-template-columns: 112px minmax(0,1fr); max-height: 520px; overflow: auto; }
+      .track-labels { position: sticky; left: 0; z-index: 5; background: #fbfcff; border-right: 1px solid var(--line); }
+      .track-label,.ruler-spacer { height: 42px; display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 700; }
+      .timeline-scroll { min-width: 0; overflow: hidden; }
+      .timeline-inner { position: relative; min-width: 820px; width: var(--timeline-width, 980px); }
+      .ruler { height: 42px; position: relative; background: #fbfcff; border-bottom: 1px solid var(--line); }
+      .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: #dce3ee; }
+      .tick span { position: absolute; top: 8px; left: 6px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+      .tracks { position: relative; background: repeating-linear-gradient(90deg, transparent 0, transparent 79px, rgba(17,24,39,.045) 80px), #fff; }
+      .track { height: 70px; position: relative; border-bottom: 1px solid var(--line); }
+      .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #101828; z-index: 4; pointer-events: none; }
+      .playhead::before { content: ""; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; border-radius: 999px; background: #101828; }
+      .clip { position: absolute; top: 12px; height: 46px; min-width: 24px; border-radius: 8px; color: white; cursor: grab; user-select: none; box-shadow: 0 8px 20px rgba(15,23,42,.12); border: 1px solid rgba(255,255,255,.5); overflow: hidden; }
+      .clip:active { cursor: grabbing; }
+      .clip.remove { background: var(--remove); }
+      .clip.clip-good { background: var(--clip); }
+      .clip.keep { background: var(--keep); }
+      .clip.note { background: var(--note); }
+      .clip.selected { outline: 3px solid rgba(17,24,39,.22); outline-offset: 2px; }
+      .clip-body { height: 100%; display: grid; align-content: center; gap: 2px; padding: 6px 12px; pointer-events: none; }
+      .clip-title { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .clip-time { font-size: 11px; opacity: .86; white-space: nowrap; }
+      .handle { position: absolute; top: 0; width: 9px; height: 100%; cursor: ew-resize; background: rgba(255,255,255,.24); }
+      .handle.left { left: 0; } .handle.right { right: 0; }
+      aside { min-width: 0; display: grid; gap: 18px; align-content: start; }
+      .side-head { padding: 16px 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .cards { padding: 14px 16px 16px; display: grid; gap: 10px; }
+      .decision-card { border: 1px solid var(--line); border-left-width: 5px; border-radius: 8px; padding: 12px; display: grid; gap: 8px; background: #fbfcff; cursor: pointer; }
+      .decision-card.active { border-color: #101828; background: #f3f6fb; }
+      .decision-card.remove { border-left-color: var(--remove); }
+      .decision-card.clip-good { border-left-color: var(--clip); }
+      .decision-card.keep { border-left-color: var(--keep); }
+      .decision-card.note { border-left-color: var(--note); }
+      .card-top { display: flex; justify-content: space-between; gap: 10px; }
+      .card-title { font-weight: 800; font-size: 14px; }
+      .card-time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+      .card-reason { color: var(--muted); line-height: 1.4; font-size: 13px; }
+      .inspector { padding: 16px; display: grid; gap: 12px; }
+      .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
+      input[type="number"], select { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; color: var(--text); background: white; }
+      textarea { width: 100%; min-height: 86px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; color: var(--text); }
+      .json-box { max-height: 220px; overflow: auto; margin: 0; padding: 12px; border-radius: 8px; background: #101828; color: #d9e4f5; font-size: 12px; line-height: 1.45; }
+      @media (max-width:1040px) { main,.stage { grid-template-columns: 1fr; } aside { grid-row: auto; } }
+      @media (max-width:720px) { .topbar { align-items: flex-start; flex-direction: column; } main { padding: 12px; } .metrics { grid-template-columns: 1fr; } .timeline-shell { grid-template-columns: 86px minmax(0,1fr); } .track-label,.ruler-spacer { padding: 0 8px; font-size: 12px; } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header><div class="topbar"><div class="brand"><div class="logo">C</div><span>ClipMind Timeline</span></div><div class="toolbar"><label class="file-btn" for="videoInput">Upload video</label><input id="videoInput" class="file-input" type="file" accept="video/*" /><button id="simulateBtn" class="btn primary">Generate AI notes</button><button id="exportBtn" class="btn">Export cut JSON</button></div></div></header>
+      <main>
+        <div class="workspace">
+          <section class="panel stage">
+            <div class="video-frame" id="videoFrame"><div class="empty-video">Upload a video to preview it here. The timeline works with demo data now, then it will connect to Whisper + FFmpeg.</div></div>
+            <div class="summary"><h1>Review cuts before exporting.</h1><p class="lead">ClipMind maps the full video and places AI annotations directly over the timeline. The user can move, extend, or shorten every suggested cut before sending it to FFmpeg.</p><div class="metrics"><div class="metric"><strong id="durationMetric">03:00</strong><span>Timeline length</span></div><div class="metric"><strong id="removeMetric">0</strong><span>Suggested removals</span></div><div class="metric"><strong id="clipMetric">0</strong><span>Strong clips</span></div></div><div class="legend"><span class="tag"><span class="swatch" style="background: var(--remove)"></span>Remove</span><span class="tag"><span class="swatch" style="background: var(--clip)"></span>Strong clip</span><span class="tag"><span class="swatch" style="background: var(--keep)"></span>Keep</span><span class="tag"><span class="swatch" style="background: var(--note)"></span>AI note</span></div></div>
+          </section>
+          <section class="panel timeline-panel"><div class="timeline-head"><div><h2>Visual Timeline</h2><p class="lead">Drag blocks to move them. Pull the edges to adjust in/out points.</p></div><div class="timeline-tools"><span id="currentTime">00:00</span><label>Zoom<input id="zoomRange" type="range" min="720" max="1800" value="1100" /></label></div></div><div class="timeline-shell"><div class="track-labels"><div class="ruler-spacer">Time</div><div class="track-label">Video</div><div class="track-label">Remove</div><div class="track-label">Clips</div><div class="track-label">Notes</div></div><div class="timeline-scroll"><div id="timelineInner" class="timeline-inner"><div id="ruler" class="ruler"></div><div id="tracks" class="tracks"><div class="track" data-track="video"></div><div class="track" data-track="remove"></div><div class="track" data-track="clips"></div><div class="track" data-track="notes"></div><div id="playhead" class="playhead"></div></div></div></div></div></section>
+        </div>
+        <aside><section class="panel"><div class="side-head"><h2>AI Decisions</h2><span class="tag" id="decisionCount">0 items</span></div><div id="decisionCards" class="cards"></div></section><section class="panel"><div class="side-head"><h2>Adjust Selection</h2></div><div class="inspector"><div class="field-grid"><label>Start sec<input id="startInput" type="number" step="0.1" min="0" /></label><label>End sec<input id="endInput" type="number" step="0.1" min="0" /></label></div><label>Type<select id="typeInput"><option value="remove">Remove</option><option value="clip-good">Strong clip</option><option value="keep">Keep</option><option value="note">AI note</option></select></label><label>AI reason / user note<textarea id="reasonInput"></textarea></label><button id="applyBtn" class="btn primary">Apply adjustment</button></div></section><section class="panel"><div class="side-head"><h2>Cut JSON</h2></div><div class="cards"><pre id="jsonOutput" class="json-box"></pre></div></section></aside>
+      </main>
+    </div>
+    <script>
+      const state={duration:180,selectedId:null,timelineWidth:1100,annotations:[{id:"a1",type:"keep",track:"video",start:0,end:180,title:"Full source video",reason:"Base video layer. AI notes sit on top of this track."},{id:"a2",type:"remove",track:"remove",start:0,end:4.2,title:"Cut filler intro",reason:"Speaker says filler before the real topic starts."},{id:"a3",type:"clip-good",track:"clips",start:18,end:48,title:"Strong short clip",reason:"Clear hook, complete idea, and good pacing for a Reel."},{id:"a4",type:"note",track:"notes",start:53,end:72,title:"Visual demo",reason:"Keep this pause because something important is shown on screen."},{id:"a5",type:"remove",track:"remove",start:95.5,end:103.2,title:"Remove repetition",reason:"Repeated explanation and false start."},{id:"a6",type:"clip-good",track:"clips",start:122,end:165,title:"Second candidate clip",reason:"Useful closing segment with a clean ending."}]};
+      const tracks=document.getElementById("tracks"),ruler=document.getElementById("ruler"),timelineInner=document.getElementById("timelineInner"),decisionCards=document.getElementById("decisionCards"),decisionCount=document.getElementById("decisionCount"),jsonOutput=document.getElementById("jsonOutput"),playhead=document.getElementById("playhead"),currentTime=document.getElementById("currentTime"),startInput=document.getElementById("startInput"),endInput=document.getElementById("endInput"),typeInput=document.getElementById("typeInput"),reasonInput=document.getElementById("reasonInput"),applyBtn=document.getElementById("applyBtn"),zoomRange=document.getElementById("zoomRange"),simulateBtn=document.getElementById("simulateBtn"),exportBtn=document.getElementById("exportBtn"),videoInput=document.getElementById("videoInput"),videoFrame=document.getElementById("videoFrame"),durationMetric=document.getElementById("durationMetric"),removeMetric=document.getElementById("removeMetric"),clipMetric=document.getElementById("clipMetric");
+      function formatTime(seconds){const safe=Math.max(0,seconds),mins=Math.floor(safe/60),secs=Math.floor(safe%60),tenths=Math.floor((safe%1)*10);if(safe<60)return`${String(secs).padStart(2,"0")}.${tenths}s`;return`${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`}
+      function px(value){return value/state.duration*state.timelineWidth} function clamp(item){item.start=Math.max(0,Math.min(item.start,state.duration-.5));item.end=Math.max(item.start+.5,Math.min(item.end,state.duration))} function trackIndex(track){return["video","remove","clips","notes"].indexOf(track)} function typeToTrack(type){if(type==="remove")return"remove";if(type==="clip-good")return"clips";if(type==="note")return"notes";return"video"}
+      function renderRuler(){ruler.innerHTML="";const interval=state.duration<=90?10:15;for(let t=0;t<=state.duration;t+=interval){const tick=document.createElement("div");tick.className="tick";tick.style.left=`${px(t)}px`;tick.innerHTML=`<span>${formatTime(t)}</span>`;ruler.appendChild(tick)}}
+      function renderClips(){tracks.querySelectorAll(".clip").forEach(c=>c.remove());state.annotations.forEach(item=>{clamp(item);const clip=document.createElement("div");clip.className=`clip ${item.type}${state.selectedId===item.id?" selected":""}`;clip.dataset.id=item.id;clip.style.left=`${px(item.start)}px`;clip.style.width=`${Math.max(24,px(item.end-item.start))}px`;clip.style.top=`${trackIndex(item.track)*70+12}px`;clip.innerHTML=`<span class="handle left" data-handle="left"></span><div class="clip-body"><span class="clip-title">${item.title}</span><span class="clip-time">${formatTime(item.start)} - ${formatTime(item.end)}</span></div><span class="handle right" data-handle="right"></span>`;tracks.appendChild(clip)})}
+      function renderCards(){const actionable=state.annotations.filter(item=>item.id!=="a1");decisionCount.textContent=`${actionable.length} items`;decisionCards.innerHTML=actionable.map(item=>`<article class="decision-card ${item.type}${state.selectedId===item.id?" active":""}" data-card-id="${item.id}"><div class="card-top"><span class="card-title">${item.title}</span><span class="card-time">${formatTime(item.start)} - ${formatTime(item.end)}</span></div><p class="card-reason">${item.reason}</p></article>`).join("")}
+      function renderJson(){const payload={duration:state.duration,remove:state.annotations.filter(i=>i.type==="remove").map(({start,end,title,reason})=>({start,end,title,reason})),clips:state.annotations.filter(i=>i.type==="clip-good").map(({start,end,title,reason})=>({start,end,title,reason})),notes:state.annotations.filter(i=>i.type==="note").map(({start,end,title,reason})=>({start,end,title,reason}))};jsonOutput.textContent=JSON.stringify(payload,null,2)}
+      function renderMetrics(){durationMetric.textContent=formatTime(state.duration);removeMetric.textContent=state.annotations.filter(i=>i.type==="remove").length;clipMetric.textContent=state.annotations.filter(i=>i.type==="clip-good").length}
+      function syncInspector(){const item=state.annotations.find(e=>e.id===state.selectedId),disabled=!item||item.id==="a1";[startInput,endInput,typeInput,reasonInput,applyBtn].forEach(c=>c.disabled=disabled);if(!item||item.id==="a1"){startInput.value="";endInput.value="";reasonInput.value="Select an AI block to adjust it.";return}startInput.value=item.start.toFixed(1);endInput.value=item.end.toFixed(1);typeInput.value=item.type;reasonInput.value=item.reason}
+      function render(){timelineInner.style.setProperty("--timeline-width",`${state.timelineWidth}px`);renderRuler();renderClips();renderCards();renderJson();renderMetrics();syncInspector()} function selectItem(id){state.selectedId=id;render()} function updatePlayhead(seconds){const x=Math.max(0,Math.min(px(seconds),state.timelineWidth));playhead.style.left=`${x}px`;currentTime.textContent=formatTime(seconds)}
+      tracks.addEventListener("pointerdown",event=>{const clip=event.target.closest(".clip");if(!clip){const rect=tracks.getBoundingClientRect(),x=event.clientX-rect.left+tracks.parentElement.scrollLeft;updatePlayhead(x/state.timelineWidth*state.duration);return}const item=state.annotations.find(entry=>entry.id===clip.dataset.id);if(!item||item.id==="a1"){selectItem(item?.id);return}selectItem(item.id);clip.setPointerCapture(event.pointerId);const handle=event.target.dataset.handle,startX=event.clientX,originalStart=item.start,originalEnd=item.end,secondsPerPixel=state.duration/state.timelineWidth;function onMove(moveEvent){const delta=(moveEvent.clientX-startX)*secondsPerPixel;if(handle==="left")item.start=Math.min(originalEnd-.5,originalStart+delta);else if(handle==="right")item.end=Math.max(originalStart+.5,originalEnd+delta);else{const length=originalEnd-originalStart;item.start=originalStart+delta;item.end=item.start+length}clamp(item);render()}function onUp(){window.removeEventListener("pointermove",onMove);window.removeEventListener("pointerup",onUp)}window.addEventListener("pointermove",onMove);window.addEventListener("pointerup",onUp)});
+      decisionCards.addEventListener("click",event=>{const card=event.target.closest("[data-card-id]");if(card)selectItem(card.dataset.cardId)});applyBtn.addEventListener("click",()=>{const item=state.annotations.find(entry=>entry.id===state.selectedId);if(!item||item.id==="a1")return;item.start=Number(startInput.value);item.end=Number(endInput.value);item.type=typeInput.value;item.track=typeToTrack(item.type);item.reason=reasonInput.value.trim()||item.reason;clamp(item);render()});zoomRange.addEventListener("input",()=>{state.timelineWidth=Number(zoomRange.value);render()});
+      simulateBtn.addEventListener("click",()=>{state.annotations=state.annotations.filter(item=>item.id==="a1");state.annotations.push({id:`r${Date.now()}`,type:"remove",track:"remove",start:6,end:12.4,title:"Cut hesitation",reason:"Detected filler and repeated setup before the point lands."},{id:`c${Date.now()}`,type:"clip-good",track:"clips",start:26,end:57,title:"Main highlight",reason:"Strong explanation with a complete idea and clean ending."},{id:`n${Date.now()}`,type:"note",track:"notes",start:61,end:89,title:"Screen moment",reason:"AI frame analysis says there is a visual demo here, so preserve context."},{id:`r2${Date.now()}`,type:"remove",track:"remove",start:108,end:116,title:"Remove false start",reason:"Speaker restarts the phrase and says it better immediately after."});state.selectedId=null;render()});
+      exportBtn.addEventListener("click",async()=>{const text=jsonOutput.textContent;try{await navigator.clipboard.writeText(text);exportBtn.textContent="Copied JSON";setTimeout(()=>exportBtn.textContent="Export cut JSON",1200)}catch{const blob=new Blob([text],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="clipmind-cuts.json";a.click();URL.revokeObjectURL(url)}});
+      videoInput.addEventListener("change",()=>{const file=videoInput.files&&videoInput.files[0];if(!file)return;const url=URL.createObjectURL(file),video=document.createElement("video");video.controls=true;video.src=url;video.addEventListener("loadedmetadata",()=>{if(Number.isFinite(video.duration)&&video.duration>0){state.duration=Math.round(video.duration*10)/10;state.annotations[0].end=state.duration;state.annotations=state.annotations.map(item=>{if(item.id==="a1")return item;const ratioStart=item.start/180,ratioEnd=item.end/180;return{...item,start:Math.round(ratioStart*state.duration*10)/10,end:Math.round(ratioEnd*state.duration*10)/10}});render()}});video.addEventListener("timeupdate",()=>updatePlayhead(video.currentTime));videoFrame.innerHTML="";videoFrame.appendChild(video)});
+      render();updatePlayhead(0);
+    </script>
+  </body>
+</html>
